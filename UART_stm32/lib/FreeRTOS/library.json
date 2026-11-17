@@ -1,0 +1,8 @@
+{
+  "name": "FreeRTOS-Kernel",
+  "version": "10.3.1",
+  "build": {
+    "srcDir": "src",
+    "includeDir": "include"
+  }
+}
