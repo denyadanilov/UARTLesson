@@ -6,6 +6,7 @@
 
 typedef int sibling_handle_t;
 
-void sibling_init(sibling_handle_t* handle, SemaphoreHandle_t semaphore);
+void sibling_init(sibling_handle_t* handle, SemaphoreHandle_t send_semaphore,
+                  SemaphoreHandle_t receive_semaphore);
 
 #endif  // SRC_SIBLING_H

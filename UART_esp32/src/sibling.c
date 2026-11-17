@@ -26,7 +26,8 @@ const char* commandToSend = "Toggle Pin";
 void send_message_task(void* arg);
 static void receive_message_task(void* arg);
 
-void sibling_init(sibling_handle_t* handle, SemaphoreHandle_t semaphore) {
+void sibling_init(sibling_handle_t* handle, SemaphoreHandle_t send_semaphore,
+                  SemaphoreHandle_t receive_semaphore) {
   const uart_config_t uart_config = {
       .baud_rate = BAUD_RATE,
       .data_bits = UART_DATA_8_BITS,
@@ -42,10 +43,10 @@ void sibling_init(sibling_handle_t* handle, SemaphoreHandle_t semaphore) {
   ESP_ERROR_CHECK(uart_set_pin(UART_NUM, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE,
                                UART_PIN_NO_CHANGE));
 
-  xTaskCreate(send_message_task, "send_message_task", 2048, (void*)semaphore, 5,
-              NULL);
-  xTaskCreate(receive_message_task, "receive_message_task", 3072, NULL, 5,
-              NULL);
+  xTaskCreate(send_message_task, "send_message_task", 2048,
+              (void*)send_semaphore, 5, NULL);
+  xTaskCreate(receive_message_task, "receive_message_task", 3072,
+              (void*)receive_semaphore, 5, NULL);
 
   *handle = sibling_id;
 }
@@ -77,8 +78,10 @@ static void receive_message_task(void* arg) {
                                         pdMS_TO_TICKS(RX_READ_TIMEOUT_MS));
     if (rxBytes > 0) {
       data[rxBytes] = '\0';
-      ESP_LOGI(TAG, "Read %d bytes: '%s'", rxBytes, (const char*)data);
-      ESP_LOG_BUFFER_HEXDUMP(TAG, data, rxBytes, ESP_LOG_DEBUG);
+      if (strcmp((const char*)data, commandToSend) == 0) {
+        SemaphoreHandle_t semaphore = (SemaphoreHandle_t)arg;
+        xSemaphoreGive(semaphore);
+      }
     } else if (rxBytes < 0) {
       ESP_LOGE(TAG, "UART read error");
       vTaskDelay(pdMS_TO_TICKS(RX_READ_TIMEOUT_MS));
